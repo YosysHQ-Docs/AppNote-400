@@ -2,18 +2,19 @@
 Introduction to Mutation Coverage with Yosys (MCY)
 --------------------------------------------------
 
-This guide will explain how to set up a project from scratch using the bit-counter project example ``bitcnt``. You can find this example in the directory ``examples/mcy_demo/bitcnt`` of the Tabby CAD Suite or `OSS CAD Suite <https://github.com/YosysHQ/oss-cad-suite-build/releases/latest>`_ download, or `in the MCY source <https://github.com/YosysHQ/mcy/tree/master/examples/bitcnt>`_.
+This guide will explain how to set up a project from scratch using the bit-counter project example ``bitcnt``. You can find this example in the directory ``examples/mcy_demo/bitcnt`` of the `Tabby CAD Suite <https://www.yosyshq.com/tabby-cad-datasheet>`_ or `OSS CAD Suite <https://github.com/YosysHQ/oss-cad-suite-build/releases/latest>`_ download, or `in the MCY source <https://github.com/YosysHQ/mcy/tree/master/examples/bitcnt>`_.
 
 You should start out with the following files:
 
-``bitcnt_tb.v``: a self-checking testbench (or a set of testbenches) for which you wish to measure coverage. This is not restricted to HDL testbenches but can be any kind of test that can be launched without manual intervention and can return a PASS/FAIL result.
+``bitcnt_tb.v``: a self-checking testbench (or a set of testbenches) for which you wish to measure coverage. This is not restricted to HDL testbenches but can be any kind of test that can be launched from a script without manual intervention and can return a PASS/FAIL result.
 
-``bitcnt.v``: this represents the synthesizable design (or portion of the design) that is going to be mutated by ``mcy``. This design can comprise multiple modules/files. If your design is large, or requires many steps of formal verification, you should split your design into multiple parts to be mutated separately. The "mutation top level module" does not have to be the same as the module under test in the testbench, it can be any module in its submodule hierarchy.
+``bitcnt.v``: this represents the synthesizable design (or portion of the design) that is going to be mutated by MCY. This design can comprise multiple modules/files. If your design is large, or requires many steps of formal verification, you should split your design into multiple parts to be mutated separately. The "mutation top level module" does not have to be the same as the module under test in the testbench, it can be any module in its submodule hierarchy.
 
-After completing this tutorial, your files should match the contents of the ``examples/bitcnt`` directory.
+After completing this tutorial, your files should match the contents of the ``bitcnt`` project from the MCY examples directory.
 
 Configuration file
 ~~~~~~~~~~~~~~~~~~
+
 Create a new directory for your project, and inside it create a new file called ``config.mcy``. This is the main MCY configuration file. There are several required sections in a MCY config file which will be progressively filled in in the next steps. Insert the first five headers for these sections now:
 
 .. code-block:: text
@@ -35,18 +36,18 @@ The first setting can already be added now, under the ``[options]`` section:
 	[options]
 	size 10
 
-This is the number of mutations that ``mcy`` will generate. To begin with, this very low is chosen number during setup of the project so that the test runs are quick. Once everything is running correctly, we will increase the size of the mutation set.
+This is the number of mutations that MCY will generate. To begin with, this very low is chosen number during setup of the project so that the test runs are quick. Once everything is running correctly, we will increase the size of the mutation set.
 
 Mutable netlist generation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 Yosys introduces mutations in a (coarse-grain) synthesized netlist. In a first step, we need to tell Yosys how to build this netlist.
 
-In the ``[script]`` section, fill in the steps to read your design in Yosys:
+In the ``[script]`` section, fill in the steps to read your design into Yosys:
 
 .. code-block:: text
 
 	[script]
-	read_verilog bitcnt.v
+	read -sv bitcnt.v
 	prep -top bitcnt
 
 This should be a series of ``read`` commands, one per file. If your design is large, include only the subset of files necessary to build the module that should be mutated. When all sources are read in, the line ``prep -top bitcnt`` runs coarse grain synthesis on the module to be mutated designated by ``-top``.
@@ -61,8 +62,8 @@ In the ``[files]`` section, list the paths to the files required by the script:
 	bitcnt.v
 
 
-Script to run the testbench on the mutated module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Testbench script
+~~~~~~~~~~~~~~~~
 Create a file named ``test_sim.sh``. This will run the existing testbench on the mutated
 design. Add a bash preamble, then call the script ``create_mutated.sh``:
 
@@ -75,10 +76,10 @@ design. Add a bash preamble, then call the script ``create_mutated.sh``:
 
 	bash $SCRIPTS/create_mutated.sh
 
-When ``mcy`` runs, the tests will be executed in a temporary directory ``tasks/<uuid>``, so
+When MCY runs, the tests will be executed in a temporary directory ``tasks/<uuid>``, so
 the paths should be relative to this location.
 
-The script ``create_mutated.sh`` reads the mutation description files prepared in the temporary task directory by ``mcy`` and (if called with no additional arguments) writes a file ``mutated.v`` containing the mutated module.
+The script ``create_mutated.sh`` reads the mutation description files prepared in the temporary task directory by MCY and (if called with no additional arguments) writes a file ``mutated.v`` containing the mutated module.
 
 Next, insert whatever code will run your testbench as usual, but replacing the original
 source for the module to be mutated (``bitcount.v``) with the mutated source
@@ -112,7 +113,7 @@ You can test that this portion works correctly as follows:
 
 - create the directories ``database`` and ``tasks/test`` inside the project directory
 
-  Note: these directories will get deleted when you run ``mcy`` so do not save any important files in them.
+  Note: these directories will get deleted when you run MCY so do not save any important files in them.
 
 - add ``write_ilang database/design.il`` to the end of the ``script.ys`` file created earlier
 
@@ -127,7 +128,7 @@ You can test that this portion works correctly as follows:
 
 ..
 
-	(Adjust the path for SCRIPTS to match the mcy install location if necessary.)
+	(Adjust the path for SCRIPTS to match the MCY install location if necessary.)
 
 - verify that the file ``output.txt`` was created and contains ``1 PASS``.
 
@@ -139,15 +140,15 @@ If everything is working, add the following section to the bottom of ``config.mc
 	expect PASS FAIL
 	run bash $PRJDIR/test_sim.sh
 
-This tells ``mcy`` that the test ``test_sim`` exists and how to run it. If ``output.txt``
+This tells MCY that the test ``test_sim`` exists and how to run it. If ``output.txt``
 ever contains a value not listed under ``expect`` when this test is run, the entire
-``mcy`` process will be aborted.
+MCY process will be aborted.
 
-Setting up the formal equivalence test
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-This is the most work-intensive part of an ``mcy`` project, but also what makes ``mcy`` special. To know whether the testbench under test *should* return PASS or FAIL, we will set up a formal property check that can conclusively determine whether a mutation can affect the output of the module in a relevant way.
+Formal equivalence test
+~~~~~~~~~~~~~~~~~~~~~~~
+This is the most work-intensive part of an MCY project, but also what makes MCY special. To know whether the testbench under test *should* return PASS or FAIL, we will set up a formal property check that can conclusively determine whether a mutation can affect the output of the module in a relevant way.
 
-The advantage of using formal methods is that they will exhaustively explore all possible input combinations, which is prohibitive for a simulation testbench for most non-trivial designs due to combinatorial explosion. But the ``mcy`` approach is also less difficult than outright formally verifying the design, as it is generally easier to describe whether a change to the output is "important" than to describe the correct behaviour directly.
+The advantage of using formal methods is that they will exhaustively explore all possible input combinations, which is prohibitive for a simulation testbench for most non-trivial designs due to combinatorial explosion. But the MCY approach is also less difficult than outright formally verifying the design, as it is generally easier to describe whether a change to the output is "important" than to describe the correct behaviour directly.
 
 Unlike in the previous test where we exported the mutated module with the same interface as the original module so we could seamlessly replace it in the testbench, here we will use the ``-c`` option to get a module where we can enable or disable the mutation at will based on an input signal ``mutsel``. We will also export to ILANG format instead of Verilog since SBY understands it.
 
@@ -285,7 +286,7 @@ Finally, set up the configuration for this test at the end of ``config.mcy``:
 Tagging Logic
 ~~~~~~~~~~~~~
 
-Now that we have set up the two tests, we need to tell ``mcy`` how we want to analyze the results. With two tests, there are only four possible outcomes, which we can each assign a tag:
+Now that we have set up the two tests, we need to tell MCY how we want to analyze the results. With two tests, there are only four possible outcomes, which we can each assign a tag:
 
 - both tests fail: the testbench accurately detects the problem, i.e. the mutation is COVERED.
 
@@ -338,16 +339,15 @@ Finally, fill in the ``[report]`` section as follows:
 This is again a section that defines a python function. Here, the function ``tags("<name>")`` can be used to obtain the number of mutations tagged with a given tag.
 If there is a formal gap, this is highly problematic so it will be reported first. Secondly, we print a coverage metric calculated as the percent of covered mutations out of all mutations that induce a relevant design change, i.e. both those tagged as covered and as uncovered.
 
-Running mcy
+Running MCY
 ~~~~~~~~~~~
-
-Now the ``mcy`` project is fully set up. Delete the temporary folders ``database`` and ``tasks`` we created for testing by running:
+Now the MCY project is fully set up. Delete the temporary folders ``database`` and ``tasks`` we created for testing by running:
 
 .. code-block:: text
 
 	mcy purge
 
-Then, execute ``mcy``:
+Then, execute MCY:
 
 .. code-block:: text
 
@@ -406,8 +406,7 @@ As mutations are generated randomly, the better your coverage, the larger the si
 
 Bonus: Integrating a second test
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Often, you will have a whole collection of tests of differing scope and strictness. These can all be integrated into a single ``mcy`` project to obtain a coverage metric for the test suite as a whole. In this section we will add a second, longer-running but more thorough testbench to increase the coverage metric.
+Often, you will have a whole collection of tests of differing scope and strictness. These can all be integrated into a single MCY project to obtain a coverage metric for the test suite as a whole. In this section we will add a second, longer-running but more thorough testbench to increase the coverage metric.
 
 ``test_fm`` is a formal testbench that fully verifies that the module fulfils a formal definition of the desired behaviour. Because it significantly increases the runtime of the example, ``test_fm`` is disabled by default in the ``bitcnt`` example. It can be enabled or disabled by setting the variable ``use_formal`` defined in ``config.mcy``.
 
@@ -439,7 +438,7 @@ Next, we will create the script to run this test on a mutated design. Create a f
 
 Since we are using SBY for this test as well, the script overall resembles ``test_eq.sh``. The main difference is that we do not pass ``-c`` to ``create_mutated.sh``, since we need a mutated replacement module with the same interface as the original ``bitcnt`` module to substitute in the testbench.
 
-As before, we will need the ``database/`` and ``tasks/`` directories for a trial run, but this time we can use the existing ``mcy`` project to create them.
+As before, we will need the ``database/`` and ``tasks/`` directories for a trial run, but this time we can use the existing MCY project to create them.
 
 If the file ``database/design.il`` does not exist, run ``mcy init`` to create it.
 
@@ -447,7 +446,7 @@ Next, run ``mcy task -k test_sim 1``. Take note of the task uuid printed.
 
 Enter the directory ``tasks/${uuid}`` created by this command and run ``bash ../../test_fm.sh`` to check that the test functions correctly (it should return PASS, because task 1 is always ``mutate -mode none`` which introduces no mutation).
 
-If it works as expected, we can add this test to the ``mcy`` configuration. In ``config.mcy``, under the section ``[options]`` reduce the size again while we work and add a new tag ``FMONLY``:
+If it works as expected, we can add this test to the MCY configuration. In ``config.mcy``, under the section ``[options]`` reduce the size again while we work and add a new tag ``FMONLY``:
 
 .. code-block:: text
 
@@ -513,7 +512,7 @@ If everything is working correctly, you can return the mutation set size to its 
 	[options]
 	size 1000
 
-Running ``mcy`` will now require significantly more time, so don't forget to enable parallelism:
+Running MCY will now require significantly more time, so don't forget to enable parallelism:
 
 .. code-block:: text
 
