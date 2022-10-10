@@ -67,7 +67,7 @@ Testbench script
 Create a file named ``test_sim.sh``. This will run the existing testbench on the mutated
 design. Add a bash preamble, then call the script ``create_mutated.sh``:
 
-.. code-block:: text
+.. code-block:: bash
 
 	#!/bin/bash
 
@@ -85,7 +85,7 @@ Next, insert whatever code will run your testbench as usual, but replacing the o
 source for the module to be mutated (``bitcount.v``) with the mutated source
 (``mutated.v``). The bitcnt testbench uses ``iverilog``:
 
-.. code-block:: text
+.. code-block:: bash
 
 	iverilog -o sim ../../bitcnt_tb.v mutated.v
 	vvp -n sim > sim.out
@@ -93,7 +93,7 @@ source for the module to be mutated (``bitcount.v``) with the mutated source
 
 Finally, write the status returned by the testbench to the file ``output.txt``:
 
-.. code-block:: text
+.. code-block:: bash
 
 	if grep PASS sim.out && ! grep ERROR sim.out; then
 		echo "1 PASS" > output.txt
@@ -119,16 +119,14 @@ You can test that this portion works correctly as follows:
 
 - run the following commands:
 
-.. code-block:: text
+  .. code-block:: bash
 
-	yosys script.ys
-	cd tasks/test
-	echo "1 mutate -mode none" > input.txt
-	SCRIPTS=/usr/local/share/mcy/scripts bash ../../test_sim.sh
+  	yosys script.ys
+  	cd tasks/test
+  	echo "1 mutate -mode none" > input.txt
+  	SCRIPTS=/usr/local/share/mcy/scripts bash ../../test_sim.sh
 
-..
-
-	(Adjust the path for SCRIPTS to match the MCY install location if necessary.)
+  (Adjust the path for SCRIPTS to match the MCY install location if necessary.)
 
 - verify that the file ``output.txt`` was created and contains ``1 PASS``.
 
@@ -154,7 +152,7 @@ Unlike in the previous test where we exported the mutated module with the same i
 
 Create a file ``test_eq.sh`` and add the following script:
 
-.. code-block:: text
+.. code-block:: bash
 
 	#!/bin/bash
 
@@ -165,7 +163,7 @@ Create a file ``test_eq.sh`` and add the following script:
 
 Next, we will create a miter circuit that compares the original and the mutated module. Create a file named ``test_eq.sv`` and enter the following code:
 
-.. code-block:: text
+.. code-block::
 
 	module miter (
 		input [63:0] ref_din_data,
@@ -199,7 +197,7 @@ The goal is to be as precise as possible about the conditions under which we exp
 
 At the end of the miter module (before ``endmodule``), insert the following code:
 
-.. code-block:: text
+.. code-block::
 
 	always @* begin
 		casez (din_func)
@@ -255,7 +253,7 @@ You can consult the `SBY documentation`_ for detailed information about how to s
 
 You can test your ``sby`` setup in the ``tasks/test`` directory with the already created ``input.txt`` as follows:
 
-.. code-block:: text
+.. code-block:: bash
 
 	cd tasks/test
 	ln -s ../../test_eq.sv ../../test_eq.sby .
@@ -264,7 +262,7 @@ You can test your ``sby`` setup in the ``tasks/test`` directory with the already
 
 As we are once again testing the "do nothing" mutation, this should return ``PASS``. If it works correctly, we can complete the script for this test to run ``sby`` and extract the return value. Append the following to ``test_eq.sh``:
 
-.. code-block:: text
+.. code-block:: bash
 
 	ln -fs ../../test_eq.sv ../../test_eq.sby .
 
@@ -306,7 +304,7 @@ Declare these four tags in the ``[options]`` section:
 
 Then, under the ``[logic]`` section, describe how to tag the tests:
 
-.. code-block:: text
+.. code-block:: python
 
 	sim_okay = result("test_sim") == "PASS"
 	eq_okay = result("test_eq") == "PASS"
@@ -343,13 +341,13 @@ Running MCY
 ~~~~~~~~~~~
 Now the MCY project is fully set up. Delete the temporary folders ``database`` and ``tasks`` we created for testing by running:
 
-.. code-block:: text
+.. code-block:: bash
 
 	mcy purge
 
 Then, execute MCY:
 
-.. code-block:: text
+.. code-block:: bash
 
 	mcy init
 	mcy run
@@ -365,7 +363,7 @@ If this initial test run completes successfully and prints a coverage metric, yo
 
 This time, the tests will take longer to run, so enable parallel runs (replace ``$(nproc)`` with the number of cores to use):
 
-.. code-block:: text
+.. code-block:: bash
 
 	mcy reset
 	mcy run -j$(nproc)
@@ -374,7 +372,7 @@ This time, the tests will take longer to run, so enable parallel runs (replace `
 
 While the tests are being run, in a second terminal, you can run (in the base project directory where your ``config.mcy`` is located)
 
-.. code-block:: text
+.. code-block:: bash
 
 	mcy dash
 
@@ -382,7 +380,7 @@ and open the provided address in your browser to follow progress in the dashboar
 
 Once the tests complete, you can use:
 
-.. code-block:: text
+.. code-block:: bash
 
 	mcy gui
 
@@ -390,7 +388,7 @@ to explore visually the hotspots in your code where coverage gaps exist. This is
 
 A similar, command-line-only view is produced by:
 
-.. code-block:: text
+.. code-block:: bash
 
 	mcy source bitcnt.v
 
@@ -398,7 +396,7 @@ Positive numbers in the left-hand column indicate mutations tagged as COVERED, n
 
 You can try to improve the testbench in ``bitcnt_tb.v`` to achieve better coverage. After modifying this file, don't forget to invalidate old results by running:
 
-.. code-block:: text
+.. code-block:: bash
 
 	mcy purge
 
@@ -420,7 +418,7 @@ If you are curious how the formal verification is implemented, you may take a lo
 
 Next, we will create the script to run this test on a mutated design. Create a file named ``test_fm.sh`` in your project directory with the following contents:
 
-.. code-block:: text
+.. code-block:: bash
 
 	#!/bin/bash
 
@@ -471,7 +469,7 @@ Finally, we will adjust the ``[logic]`` section to use this new test. First, def
 
 Second, after the two original tests are run, but before the tags are applied, insert a new piece of code:
 
-.. code-block:: text
+.. code-block:: python
 
 	tb_okay = (result("test_sim") == "PASS")
 	eq_okay = (result("test_eq") == "PASS")
@@ -491,7 +489,7 @@ As the variable ``tb_okay`` is potentially modified in this ``if`` before the or
 
 Test that this new configuration works correctly:
 
-.. code-block:: text
+.. code-block:: bash
 
 	mcy purge
 	mcy init
@@ -514,7 +512,7 @@ If everything is working correctly, you can return the mutation set size to its 
 
 Running MCY will now require significantly more time, so don't forget to enable parallelism:
 
-.. code-block:: text
+.. code-block:: bash
 
 	mcy reset
 	mcy run -j$(nproc)
