@@ -7,14 +7,13 @@ templates_path = ['_templates']
 
 # select HTML theme
 html_theme = "furo"
+
+# These folders are copied to the documentation's HTML output
 html_static_path = ['_static']
 
 html_logo = '_static/logo.png'
 html_favicon = '_static/favico.png'
 html_css_files = ['custom.css']
-
-# These folders are copied to the documentation's HTML output
-html_static_path = ['_static']
 
 # code blocks style 
 pygments_style = 'colorful'
